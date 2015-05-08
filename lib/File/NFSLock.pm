@@ -161,11 +161,12 @@ sub new {
     ### If lock exists and is readable, see who is mooching on the lock
 
     my $fh;
+    my @them = ();
+
     if ( -e $self->{lock_file} &&
          open ($fh,'+<', $self->{lock_file}) ){
 
       my @mine = ();
-      my @them = ();
       my @dead = ();
 
       my $has_lock_exclusive = !((stat _)[2] & $SHARE_BIT);
@@ -239,7 +240,8 @@ sub new {
     ### If non-blocking, then kick out now.
     ### ($errstr might already be set to the reason.)
     if ($self->{lock_type} & LOCK_NB) {
-      $errstr ||= "NONBLOCKING lock failed!";
+      $errstr ||= "NONBLOCKING lock failed - holder(s) " . join( ',', @them );
+      $errstr =~ s/\n//gms;
       return undef;
     }
 
@@ -248,7 +250,8 @@ sub new {
 
     ### but don't wait past the time out
     if( $quit_time && (time > $quit_time) ){
-      $errstr = "Timed out waiting for blocking lock";
+      $errstr ||= "Timed out waiting for blocking lock - holder(s) " . join( ',', @them );
+      $errstr =~ s/\n//gms;
       return undef;
     }
 
